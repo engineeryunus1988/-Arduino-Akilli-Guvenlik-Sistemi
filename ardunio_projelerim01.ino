@@ -2,15 +2,10 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 
-// OLED ekran genişlik ve yükseklik
 #define SCREEN_WIDTH 128 
 #define SCREEN_HEIGHT 64 
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 
-// OLED reset pini (bazı modellerde -1 yerine 4 gerekebilir ama genelde -1'dir)
-#define OLED_RESET     -1 
-Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
-
-// Pinler
 const int ledSari = 2;
 const int ledYesil = 3;
 const int buzzerPin = 4;
@@ -18,61 +13,57 @@ const int lazerPin = 5;
 const int gazSensor = A0; 
 
 void setup() {
-  Serial.begin(9600); // Hata ayıklama için seri portu açalım
-  
   pinMode(ledSari, OUTPUT);
   pinMode(ledYesil, OUTPUT);
   pinMode(buzzerPin, OUTPUT);
   pinMode(lazerPin, OUTPUT);
 
-  // OLED ekranı başlat
-  // 0x3C adresi çalışmazsa 0x3D dene!
   if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { 
-    Serial.println(F("OLED ekran bulunamadi!"));
     for(;;); 
   }
 
   display.clearDisplay();
-  display.setTextSize(1);
-  display.setTextColor(SSD1306_WHITE);
-  display.setCursor(0,0);
-  display.println("SISTEM HAZIR!");
+  display.setTextColor(WHITE);
   display.display();
-  delay(2000);
 }
 
 void loop() {
-  int deger = analogRead(gazSensor); // Gaz değerini oku
+  int deger = analogRead(gazSensor); // MQ-135'ten gelen canlı veri
   
   display.clearDisplay();
+  
+  // Üst Başlık
+  display.setTextSize(1);
   display.setCursor(0,0);
-  display.print("Gaz Seviyesi: ");
-  display.println(deger);
+  display.print("HAVA KALITESI: ");
+  display.println(deger); // Sayısal değeri buraya ekledik
 
-  if(deger > 350) { // Gaz eşiği
-    display.setCursor(0,20);
+  // Çizgi Çizerek Ekranı Bölüyoruz (Görsel şov için)
+  display.drawLine(0, 12, 128, 12, WHITE);
+
+  if(deger > 450) { // Eşik değerini duruma göre buradan ayarla
+    display.setCursor(15, 30);
     display.setTextSize(2);
     display.println("ALARM!!!");
     
-    // Alarm kısmındaki bu bölümü şöyle değiştir:
-if(deger > 350) { 
-    digitalWrite(buzzerPin, LOW); // Aktif düşük olduğu için LOW ses çıkarır
+    // Tehlike anında her şey aktif
     digitalWrite(lazerPin, HIGH);
-    delay(500);                   // Sesi yarım saniye boyunca tut (daha belirgin olur)
-    digitalWrite(buzzerPin, HIGH); // Sustur
-    digitalWrite(lazerPin, LOW);
-    delay(100);                   // Kısa ara
-}
+    digitalWrite(buzzerPin, LOW); // Aktif düşük buzzer için
+    digitalWrite(ledSari, HIGH);
+    delay(150);
+    digitalWrite(buzzerPin, HIGH);
+    digitalWrite(ledSari, LOW);
+    delay(150);
   } else {
-    display.setCursor(0,20);
+    display.setCursor(10, 35);
     display.setTextSize(1);
-    display.println("Hava Temiz.");
+    display.println("DURUM: TEMIZ");
     
     digitalWrite(lazerPin, LOW);
-    digitalWrite(buzzerPin, LOW);
+    digitalWrite(buzzerPin, HIGH); // Sustur
     digitalWrite(ledSari, LOW);
     
-    // Normal durumda yeşil yansın
+    // Normal çalışma ışığı
     digitalWrite(ledYesil, HIGH);
     delay(500);
     digitalWrite(ledYesil, LOW);
